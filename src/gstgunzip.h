@@ -71,7 +71,6 @@ struct _GstGunzip
 
   GstPad *sinkpad, *srcpad;
 
-  gboolean silent;
 };
 
 struct _GstGunzipClass 

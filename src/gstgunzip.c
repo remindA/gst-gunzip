@@ -100,11 +100,6 @@ static GstStaticPadTemplate src_factory = GST_STATIC_PAD_TEMPLATE ("src",
 GST_BOILERPLATE (GstGunzip, gst_gunzip, GstElement,
     GST_TYPE_ELEMENT);
 
-static void gst_gunzip_set_property (GObject * object, guint prop_id,
-    const GValue * value, GParamSpec * pspec);
-static void gst_gunzip_get_property (GObject * object, guint prop_id,
-    GValue * value, GParamSpec * pspec);
-
 static gboolean gst_gunzip_set_caps (GstPad * pad, GstCaps * caps);
 static GstFlowReturn gst_gunzip_chain (GstPad * pad, GstBuffer * buf);
 
@@ -137,12 +132,7 @@ gst_gunzip_class_init (GstGunzipClass * klass)
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
 
-  gobject_class->set_property = gst_gunzip_set_property;
-  gobject_class->get_property = gst_gunzip_get_property;
-
-  g_object_class_install_property (gobject_class, PROP_SILENT,
-      g_param_spec_boolean ("silent", "Silent", "Produce verbose output ?",
-          FALSE, G_PARAM_READWRITE));
+  gstelement_class->change_state = gst_gunzip_change_state;
 }
 
 /* initialize the new element
@@ -168,39 +158,6 @@ gst_gunzip_init (GstGunzip * filter,
 
   gst_element_add_pad (GST_ELEMENT (filter), filter->sinkpad);
   gst_element_add_pad (GST_ELEMENT (filter), filter->srcpad);
-  filter->silent = FALSE;
-}
-
-static void
-gst_gunzip_set_property (GObject * object, guint prop_id,
-    const GValue * value, GParamSpec * pspec)
-{
-  GstGunzip *filter = GST_GUNZIP (object);
-
-  switch (prop_id) {
-    case PROP_SILENT:
-      filter->silent = g_value_get_boolean (value);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-gst_gunzip_get_property (GObject * object, guint prop_id,
-    GValue * value, GParamSpec * pspec)
-{
-  GstGunzip *filter = GST_GUNZIP (object);
-
-  switch (prop_id) {
-    case PROP_SILENT:
-      g_value_set_boolean (value, filter->silent);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
 }
 
 /* GstElement vmethod implementations */
