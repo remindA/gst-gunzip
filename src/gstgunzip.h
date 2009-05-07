@@ -84,4 +84,7 @@ GType gst_gunzip_get_type (void);
 
 G_END_DECLS
 
+// There are probably considerations to be made about this size, but probably another time ;)
+#define OUTBUF_SIZE 4096
+
 #endif /* __GST_GUNZIP_H__ */

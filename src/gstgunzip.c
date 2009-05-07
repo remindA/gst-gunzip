@@ -228,14 +228,49 @@ static GstFlowReturn
 gst_gunzip_chain (GstPad * pad, GstBuffer * buf)
 {
   GstGunzip *filter;
+  GstBuffer *out;
+  GstFlowReturn pushret;
+  int ret;
 
   filter = GST_GUNZIP (GST_OBJECT_PARENT (pad));
 
-  if (filter->silent == FALSE)
-    g_print ("I'm plugged, therefore I'm in.\n");
+  // decompress until deflate stream ends or end of file. more gst buffers may be necessary
+  filter->strm.avail_in = GST_BUFFER_SIZE (buf);
+  filter->strm.next_in = GST_BUFFER_DATA (buf);
+  do
+  {
+    // allocate a new gst buffer to hold the next chunk of decompressed data and set it up on the zlib session,
+    // then decompress the input buffer.
+    out = gst_buffer_new_and_alloc (OUTBUF_SIZE);
+    filter->strm.avail_out = OUTBUF_SIZE;
+    filter->strm.next_out = GST_BUFFER_DATA (out);
+    
+    ret = inflate (&filter->strm, Z_SYNC_FLUSH);
+    if (ret != Z_OK && ret != Z_STREAM_END)
+    {
+      gst_buffer_unref (out);
+      gst_buffer_unref (buf);
+      GST_ELEMENT_ERROR (GST_ELEMENT (filter), STREAM, DECODE, ("ZLib failed to decompress data"), ("inflate returned %d", ret));
+      return GST_FLOW_ERROR;
+    }
 
-  /* just push out the incoming buffer without touching it */
-  return gst_pad_push (filter->srcpad, buf);
+    // the decompressed data may not fill the buffer entirely, so adjust its size counter to the real amount.
+    if (filter->strm.avail_out != 0) GST_BUFFER_SIZE (out) = OUTBUF_SIZE - filter->strm.avail_out;
+
+    pushret = gst_pad_push (filter->srcpad, out);
+    if (pushret != GST_FLOW_OK)
+    {
+      gst_buffer_unref (out);
+      gst_buffer_unref (buf);
+      GST_ELEMENT_ERROR (GST_ELEMENT (filter), STREAM, DECODE, ("Failed to push output buffer"), (""));
+      return pushret;
+    }
+  } while (ret != Z_STREAM_END && filter->strm.avail_out == 0);
+
+  // do not call inflateEnd here, it will be called by the state change function
+
+  gst_buffer_unref (buf);
+  return GST_FLOW_OK;
 }
 
 
