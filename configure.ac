@@ -96,6 +96,10 @@ if test "x$HAVE_GSTPB_BASE" = "xno"; then
   AC_MSG_NOTICE(no GStreamer Plugins Base libraries found (gstreamer-plugins-base-$GST_MAJORMINOR))
 fi
 
+AC_CHECK_HEADER([zlib.h], [], [AC_MSG_ERROR([*** zlib.h is required, install zlib header files])]) 
+AC_CHECK_LIB([z], [inflateEnd], [], [AC_MSG_ERROR([*** inflateEnd() function is required, install zlib library files])]) 
+LDFLAGS="$LDFLAGS -lz"
+
 dnl make _CFLAGS and _LIBS available
 AC_SUBST(GSTPB_BASE_CFLAGS)
 AC_SUBST(GSTPB_BASE_LIBS)
