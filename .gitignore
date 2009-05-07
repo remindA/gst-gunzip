@@ -7,3 +7,20 @@ configure
 libtool
 
 gst-plugin-*.tar.*
+
+INSTALL
+Makefile
+Makefile.in
+config.*
+depcomp
+install*
+ltmain*
+m4
+missing
+myfile.data
+stamp-*
+
+src/.deps
+src/.libs
+src/*.la
+src/*.lo
