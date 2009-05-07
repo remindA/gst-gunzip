@@ -102,6 +102,7 @@ GST_BOILERPLATE (GstGunzip, gst_gunzip, GstElement,
 
 static gboolean gst_gunzip_set_caps (GstPad * pad, GstCaps * caps);
 static GstFlowReturn gst_gunzip_chain (GstPad * pad, GstBuffer * buf);
+static GstStateChangeReturn gst_gunzip_change_state (GstElement *element, GstStateChange transition);
 
 /* GObject vmethod implementations */
 
@@ -174,6 +175,50 @@ gst_gunzip_set_caps (GstPad * pad, GstCaps * caps)
   gst_object_unref (filter);
 
   return gst_pad_set_caps (otherpad, caps);
+}
+
+static GstStateChangeReturn
+gst_gunzip_change_state (GstElement *element, GstStateChange transition)
+{
+  GstStateChangeReturn ret = GST_STATE_CHANGE_SUCCESS;
+  GstGunzip *filter = GST_GUNZIP (element);
+
+  switch (transition) {
+    case GST_STATE_CHANGE_READY_TO_PAUSED:
+      // Initialize zlib decompression session for this stream
+      filter->strm.zalloc = Z_NULL;
+      filter->strm.zfree = Z_NULL;
+      filter->strm.opaque = Z_NULL;
+      filter->strm.avail_in = 0;
+      filter->strm.next_in = Z_NULL;
+
+      // inflateInit2 needed to decode gzip format in addition to zlib format.
+      // the second parameter needs to be 15+32 to enable automatic detection of format.
+      ret = inflateInit2(&filter->strm, 15+32);
+      if (ret != Z_OK)
+      {
+            GST_ELEMENT_ERROR (GST_ELEMENT (filter), STREAM, DECODE, ("ZLib init failed"), ("inflateInit2 returned %d", ret));
+            return GST_STATE_CHANGE_FAILURE;
+      }
+      break;
+    default:
+      break;
+  }
+
+  ret = GST_ELEMENT_CLASS (parent_class)->change_state (element, transition);
+  if (ret == GST_STATE_CHANGE_FAILURE)
+    return ret;
+
+  switch (transition) {
+    case GST_STATE_CHANGE_PAUSED_TO_READY:
+      // Clean up zlib session when stream is over or forcibly interrupted
+      inflateEnd(&filter->strm);
+      break;
+    default:
+      break;
+  }
+
+  return ret;
 }
 
 /* chain function

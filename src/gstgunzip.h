@@ -47,6 +47,7 @@
 #define __GST_GUNZIP_H__
 
 #include <gst/gst.h>
+#include "zlib.h"
 
 G_BEGIN_DECLS
 
@@ -71,6 +72,7 @@ struct _GstGunzip
 
   GstPad *sinkpad, *srcpad;
 
+  z_stream strm;
 };
 
 struct _GstGunzipClass 
